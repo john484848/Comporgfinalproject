@@ -187,12 +187,28 @@ void print_binary(BIT* A)
 
 void convert_to_binary(int a, BIT* A, int length)
 {
+  for(unsigned int i=0; i<length; i++)
+{
+  unsigned int mask = 1u << (length - 1 - i);
+  A[i] = (a & mask) ? '1' : '0';
+}
   /* Use your implementation from Lab 6 */
 }
 
 void convert_to_binary_char(int a, char* A, int length)
 {
-  /* Use your implementation from Lab 6 */
+  if (a >= 0) {
+    for (int i = 0; i < length; ++i) {
+      A[i] = (a % 2 == 1 ? '1' : '0');
+      a /= 2;
+    }
+  } else {
+    a += 1;
+    for (int i = 0; i < length; ++i) {
+      A[i] = (a % 2 == 0 ? '1' : '0');
+      a /= 2;
+    }
+  }
 }
   
 int binary_to_integer(BIT* A)
@@ -219,7 +235,7 @@ int get_instructions(BIT Instructions[][32])
 {
   char line[256] = {0};
   int instruction_count = 0;
-  while (fgets(line, 256, stdin) != NULL) {        
+  while (fgets(line, 256, stdin) != NULL) {   
     // TODO: perform conversion of instructions to binary
     // Input: coming from stdin via: ./a.out < input.txt
     // Output: Convert instructions to binary in the instruction memory
@@ -357,6 +373,13 @@ void Data_Memory(BIT MemWrite, BIT MemRead,
 
 void Extend_Sign16(BIT* Input, BIT* Output)
 {
+  for(int i=0;i<=16;i++){
+    Output[i]=Input[i];
+  }
+  BIT a=Input[16];
+  for(int i=17;i<32;i++){
+    Output[i]=a;
+  }
   // TODO: Implement 16-bit to 32-bit sign extender
   // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
   
