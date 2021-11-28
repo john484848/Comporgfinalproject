@@ -229,13 +229,299 @@ int binary_to_integer(BIT* A)
 /* Parsing functions */
 /******************************************************************************/
 
+
+// convert instructions into opcode, funct, shamt
+void convert_instruc(char Instruc_type, char* operation, char** opcode, char** funct, char** shamt) {
+  // and, or, add, sub, slt
+  if (Instruc_type == 'R') {
+    convert_to_binary_char(0, *opcode, 6);
+    
+    // and
+    if ((strlen(operation) == 3) && (operation[0] == 'a') && (operation[1] == 'n') && (operation[2] == 'd')) {
+      *funct = "100100";
+      *shamt = "00000";
+    }
+    // or
+    else if ((strlen(operation) == 2) && (operation[0] == 'o') && (operation[1] == 'r')) {
+      *funct = "100101";
+      *shamt = "00000";
+    }
+    // add
+    else if ((strlen(operation) == 3) && (operation[0] == 'a') && (operation[1] == 'd') && (operation[2] == 'd')) {
+      *funct = "100000";
+      *shamt = "00000";
+    }
+    // sub
+    else if ((strlen(operation) == 3) && (operation[0] == 's') && (operation[1] == 'u') && (operation[2] == 'b')) {
+      *funct = "100010";
+      *shamt = "00000";
+    }
+    // slt
+    else if ((strlen(operation) == 3) && (operation[0] == 's') && (operation[1] == 'l') && (operation[2] == 't')) {
+      *funct = "101010";
+    }
+    // jr
+    else if ((strlen(operation) == 2) && (operation[0] == 'j') && (operation[1] == 'r')) {
+      *funct = "001000";
+      *shamt = "00000";
+    }
+  }
+  else if (Instruc_type == 'I') {
+    // lw
+    if ((strlen(operation) == 2) && (operation[0] == 'l') && (operation[1] == 'w')) {
+      *opcode = "100011";
+    }
+    // sw 
+    if ((strlen(operation) == 2) && (operation[0] == 's') && (operation[1] == 'w')) {
+      *opcode = "101011";
+    }
+    // beq
+    else if ((strlen(operation) == 3) && (operation[0] == 'b') && (operation[1] == 'e') && (operation[2] == 'q')) {
+      *opcode = "000100";
+    }
+    // addi
+    else if ((strlen(operation) == 4) && (operation[0] == 'a') && (operation[1] == 'd') && (operation[2] == 'd') && (operation[3] == 'i')) {
+      *opcode = "001000";
+    }
+  }
+  else if (Instruc_type == 'J') {
+    // j
+    if (strlen(operation) == 1) {
+      *opcode = "000010";
+    }
+    // jal
+    if (strlen(operation) == 3) {
+      *opcode = "000011";
+    }
+  }
+}
+
+// convert the register into binary
+void convert_reg_2_B(char* reg, char** binary_output, int len) {
+  //zero
+  if ((reg[0] == 'z') && (reg[1] == 'e') && (reg[2] == 'r') && (reg[3] == 'o')) {
+    convert_to_binary_char(0, *binary_output, 5);
+  }
+  // v0
+  else if ((reg[0] == 'v') && (reg[1] == '0')) {
+    convert_to_binary_char(2, *binary_output, 5);
+  }    
+  // a0
+  else if ((reg[0] == 'a') && (reg[1] == '0')) {
+    convert_to_binary_char(4, *binary_output, 5);
+  }    
+  // t0 
+  else if ((reg[0] == 't') && (reg[1] == '0')) {
+    convert_to_binary_char(8, *binary_output, 5);
+  }    
+  // t1
+  else if ((reg[0] == 't') && (reg[1] == '1')) {
+    convert_to_binary_char(9, *binary_output, 5);
+  }    
+  // s0
+  else if ((reg[0] == 's') && (reg[1] == '0')) {
+    convert_to_binary_char(16, *binary_output, 5);
+  }    
+  // s1
+  else if ((reg[0] == 's') && (reg[1] == '1')) {
+    convert_to_binary_char(17, *binary_output, 5);
+  }    
+  // sp
+  else if ((reg[0] == 's') && (reg[1] == 'p')) {
+    convert_to_binary_char(29, *binary_output, 5);
+  }    
+  // ra
+  else if ((reg[0] == 'r') && (reg[1] == 'a')) {
+    convert_to_binary_char(31, *binary_output, 5);
+  }   
+}
+
+// covert R type
+void convert_Rtype(char* operation, char* reg1, char* reg2, char* reg3, char** reg1_out, char** reg2_out, char** reg3_out) {
+  int reg_size = 5;
+
+  if ((operation[0] == 'j') && (operation[1] == 'r')) {
+    convert_reg_2_B(reg2, reg2_out, reg_size);
+  }
+  else {
+    convert_reg_2_B(reg1, reg1_out, reg_size);
+    convert_reg_2_B(reg2, reg2_out, reg_size);
+    convert_reg_2_B(reg3, reg3_out, reg_size);
+  }
+}
+
+// conver J type
+void convert_JType(char* address, char** j_address) {
+  int address_int = atoi(address);
+
+  convert_to_binary_char(address_int, *j_address, 26);
+}
+
+// convert I type
+void convert_IType(char* reg1, char* reg2, char* offset, char** reg1_out, char** reg2_out, char** imm_field) {
+  int reg_size = 5;
+  int offset_int = atoi(offset);
+  
+  convert_to_binary_char(offset_int, *imm_field, 16);
+
+  convert_reg_2_B(reg1, reg2_out, reg_size);
+  convert_reg_2_B(reg2, reg1_out, reg_size);
+}
+
+// output J type
+void J_output(char* opcode, char* j_address, BIT Output[32]) {
+  int i, count = 0;
+
+  for (i = 0; i < 26; i++) {
+    if (j_address[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // opcode
+  for ( i = 5; i >= 0; i--) {
+    if (opcode[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+}
+
+// output R type
+void R_output(char* opcode, char* rd_out, char* rs_out, char* rt_out, char* shamt, char* funct, BIT Output[32]) {
+  int i, count = 0;
+
+  // funct
+  for (i = 5; i >= 0; i--) {
+    if (funct[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else{
+      Output[count] = FALSE;
+    }
+    count++;
+  }  
+
+  // shamt
+  for (i = 4; i >= 0; i--) {
+    if (shamt[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else{
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // rd
+  for (i = 0; i <=4; i++) {
+    if (rd_out[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else{
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // rt
+  for (i = 0; i <=4; i++) {
+    if (rt_out[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else{
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // rs
+  for (i = 0; i <=4; i++) {
+    if (rs_out[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  } 
+
+  // opcode
+  for ( i = 5; i >= 0; i--) {
+    if (opcode[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+}
+
+// output I type
+void I_output(char* opcode, char* rs_out, char* rt_out, char* imm_field, BIT Output[32]) {
+  int i, count = 0;
+
+  // immdiate_field
+  for (i = 0; i < 16; i++) {
+    if (imm_field[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // rt
+  for (i = 0; i < 5; i++) {
+    if (rt_out[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else{
+      Output[count] = FALSE;
+    }
+    count++;
+  }
+
+  // rs
+  for (i = 0; i < 5; i++) {
+    if (rs_out[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+    count++;
+  } 
+
+  // opcode
+  for ( i = 5; i >= 0; i--) {
+    
+    if (opcode[i] == '1') {
+      Output[count] = TRUE;
+    }
+    else {
+      Output[count] = FALSE;
+    }
+
+    count++;
+  }
+}
+
 // TODO: Implement any helper functions to assist with parsing
 
-int get_instructions(BIT Instructions[][32])
-{
+int get_instructions(BIT Instructions[][32]) {
   char line[256] = {0};
   int instruction_count = 0;
-  while (fgets(line, 256, stdin) != NULL) {   
+  while (fgets(line, 256, stdin) != NULL) {     
     // TODO: perform conversion of instructions to binary
     // Input: coming from stdin via: ./a.out < input.txt
     // Output: Convert instructions to binary in the instruction memory
@@ -248,12 +534,82 @@ int get_instructions(BIT Instructions[][32])
     // - Convert immediate field and jump address field to binary
     // - Use registers to get rt, rd, rs fields
     // Note: I parse everything as strings, then convert to BIT array at end
-  
+
+    char* Operation = calloc(20, 20 * sizeof(char));
+    char* reg1 = calloc(20, 20 * sizeof(char));
+    char* reg2 = calloc(20, 20 * sizeof(char));
+    char* reg3 = calloc(20, 20 * sizeof(char));
+    char* offset = calloc(20, 20 * sizeof(char));
+    char* address = calloc(20, 20 * sizeof(char));
+    char Instruc_type;
+
+    // - Use sscanf on line to get strings for instruction and registers
+    // 1. if it is J instruction
+    if ((line[0] == 'j') && (line[1] != 'r')) {
+      sscanf(line, "%s %s", Operation, address);
+      Instruc_type = 'J';
+    }
+    // if it is I Instruction:lw                       sw                                        beq                                                            addi
+    else if (((line[0] == 'l') && (line[1] == 'w')) || ((line[0] == 's') && (line[1] == 'w')) || ((line[0] == 'b') && (line[1] == 'e') && (line[2] == 'q')) || ((line[0] == 'a') && (line[1] == 'd') && (line[2] == 'd') && (line[3] == 'i'))) {
+      sscanf(line, "%s %s %s %s", Operation, reg1, reg2, offset);
+      Instruc_type = 'I';
+    } 
+    // if it is R Instruction:and                                           or                                       add                                                           sub                                                           slt                                                            jr
+    else if (((line[0] == 'a') && (line[1] == 'n') && (line[2] == 'd')) || ((line[0] == 'o') && (line[1] == 'r')) || ((line[0] == 'a') && (line[1] == 'd') && (line[2] == 'd')) || ((line[0] == 's') && (line[1] == 'u') && (line[2] == 'b')) || ((line[0] == 's') && (line[1] == 'l') && (line[2] == 't')) || ((line[0] == 'j') && (line[1] == 'r'))) {
+      if ((line[0] == 'j') && (line[1] == 'r')) {
+        sscanf(line, "%s %s", Operation, reg2);
+      }
+      else {
+        sscanf(line, "%s %s %s %s", Operation, reg1, reg2, reg3);
+      }
+      
+      Instruc_type = 'R';
+    }
+    
+    //- Use instructions to determine op code, funct, and shamt fields
+    char* opcode = calloc(20, 20 * sizeof(char));
+    char* funct = calloc(20, 20 * sizeof(char));
+    char* shamt = calloc(20, 20 * sizeof(char));
+    char* type = calloc(20, 20 * sizeof(char)); 
+    convert_instruc(Instruc_type, Operation, &opcode, &funct, &shamt);
+
+    // - Convert immediate field and jump address field to binary
+    char* reg1_out = calloc(5, 5 * sizeof(char));
+    char* reg2_out = calloc(5, 5 * sizeof(char));
+    char* reg3_out = calloc(5, 5 * sizeof(char));
+    memset(reg1_out, '0', 5);
+    memset(reg2_out, '0', 5);
+    memset(reg3_out, '0', 5);
+    char* imm_field = calloc(16, 16 * sizeof(char));
+    memset(imm_field, '0', 16);
+    char* j_address = calloc(26, 26 * sizeof(char));
+    memset(j_address, '0', 26);
+
+    BIT Instruc_temp[32] = {FALSE};
+    int i;
+
+    if (Instruc_type == 'R') {
+      convert_Rtype(Operation, reg1, reg2, reg3, &reg1_out, &reg2_out, &reg3_out);
+      R_output(opcode, reg1_out, reg2_out, reg3_out, shamt, funct, Instruc_temp);
+    }   
+    else if (Instruc_type == 'J') {
+      convert_JType(address, &j_address);
+      J_output(opcode, j_address, Instruc_temp);
+    }
+    else if (Instruc_type == 'I') {
+      convert_IType(reg1, reg2, offset, &reg1_out, &reg2_out, &imm_field);
+      I_output(opcode, reg1_out, reg2_out, imm_field, Instruc_temp);
+    }
+ 
+    for (i = 0; i < 32; i++) {
+      Instructions[instruction_count][i] = Instruc_temp[i];
+    }
+
+    instruction_count++;
   }
   
   return instruction_count;
 }
-
 
 /******************************************************************************/
 /* Program state - memory spaces, PC, and control */
