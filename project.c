@@ -178,6 +178,11 @@ void copy_bits(BIT* A, BIT* B)
   for (int i = 0; i < 32; ++i)
     B[i] = A[i]; 
 }
+void copy_bits2(BIT* A, BIT* B,int length)
+{
+  for (int i = 0; i <length; ++i)
+    B[i] = A[i]; 
+}
 
 void print_binary(BIT* A)
 {
@@ -190,7 +195,16 @@ void convert_to_binary(int a, BIT* A, int length)
   for(unsigned int i=0; i<length; i++)
 {
   unsigned int mask = 1u << (length - 1 - i);
-  A[i] = (a & mask) ? '1' : '0';
+  A[i] = (a & mask) ? TRUE : FALSE;
+}
+  /* Use your implementation from Lab 6 */
+}
+void convert_to_binaryr(int a, BIT* A, int length)
+{
+  for(unsigned int i=0; i<length; i++)
+{
+  unsigned int mask = 1u << (length - 1 - i);
+  A[i] = (a & mask) ? TRUE : FALSE;
 }
   /* Use your implementation from Lab 6 */
 }
@@ -231,284 +245,159 @@ int binary_to_integer(BIT* A)
 
 
 // convert instructions into opcode, funct, shamt
-void convert_instruc(char Instruc_type, char* operation, char** opcode, char** funct, char** shamt) {
+void convert_instruc(char Instruc_type, char* operation, BIT Output[32]) {
   // and, or, add, sub, slt
+
   if (Instruc_type == 'R') {
-    convert_to_binary_char(0, *opcode, 6);
-    
+    convert_to_binary(0, Output+26, 6);
+    BIT shamt[5]={FALSE,FALSE,FALSE,FALSE,FALSE};
+    copy_bits2(shamt,Output+6,5);    
     // and
-    if ((strlen(operation) == 3) && (operation[0] == 'a') && (operation[1] == 'n') && (operation[2] == 'd')) {
-      *funct = "100100";
-      *shamt = "00000";
+    if (strcmp("and\0",operation)==0) {
+      BIT funct[6]={FALSE,FALSE,TRUE,FALSE,FALSE,TRUE};
+      copy_bits2(funct,Output,6);
+      //shamt = "00000";
     }
     // or
-    else if ((strlen(operation) == 2) && (operation[0] == 'o') && (operation[1] == 'r')) {
-      *funct = "100101";
-      *shamt = "00000";
+    else if (strcmp("or\0",operation)==0) {
+      BIT funct[6]={TRUE,FALSE,TRUE,FALSE,FALSE,TRUE};
+      copy_bits2(funct,Output,6);
     }
     // add
-    else if ((strlen(operation) == 3) && (operation[0] == 'a') && (operation[1] == 'd') && (operation[2] == 'd')) {
-      *funct = "100000";
-      *shamt = "00000";
+    else if (strcmp("add\0",operation)==0) {
+      BIT funct[6]={FALSE,FALSE,FALSE,FALSE,FALSE,TRUE};
+      copy_bits2(funct,Output,6);
+      //funct = "100000";
     }
     // sub
-    else if ((strlen(operation) == 3) && (operation[0] == 's') && (operation[1] == 'u') && (operation[2] == 'b')) {
-      *funct = "100010";
-      *shamt = "00000";
+    else if (strcmp("sub\0",operation)==0) {
+      BIT funct[6]={FALSE,TRUE,FALSE,FALSE,FALSE,TRUE};
+      copy_bits2(funct,Output,6);
+      //funct = "100010";
     }
     // slt
-    else if ((strlen(operation) == 3) && (operation[0] == 's') && (operation[1] == 'l') && (operation[2] == 't')) {
-      *funct = "101010";
+    else if (strcmp("slt\0",operation)==0) {
+      BIT funct[6]={FALSE,TRUE,FALSE,TRUE,FALSE,TRUE};
+      copy_bits2(funct,Output,6);
+      //funct = "101010";
     }
     // jr
-    else if ((strlen(operation) == 2) && (operation[0] == 'j') && (operation[1] == 'r')) {
-      *funct = "001000";
-      *shamt = "00000";
+    else if (strcmp("jr\0",operation)) {
+      BIT funct[6]={FALSE,FALSE,FALSE,TRUE,FALSE,FALSE};
+      copy_bits2(funct,Output,6);
+      //funct = "001000";
+      //shamt = "00000";
     }
   }
   else if (Instruc_type == 'I') {
     // lw
-    if ((strlen(operation) == 2) && (operation[0] == 'l') && (operation[1] == 'w')) {
-      *opcode = "100011";
+    if (strcmp("lw\0",operation)==0) {
+      BIT opcode[6]={TRUE,TRUE,FALSE,FALSE,FALSE,TRUE};
+      copy_bits2(opcode,Output+26,6);
     }
     // sw 
-    if ((strlen(operation) == 2) && (operation[0] == 's') && (operation[1] == 'w')) {
-      *opcode = "101011";
+    else if (strcmp("sw\0",operation)==0) {
+      BIT opcode[6]={TRUE,TRUE,FALSE,TRUE,FALSE,TRUE};
+      copy_bits2(opcode,Output+26,6);
     }
     // beq
-    else if ((strlen(operation) == 3) && (operation[0] == 'b') && (operation[1] == 'e') && (operation[2] == 'q')) {
-      *opcode = "000100";
+    else if (strcmp("beq\0",operation)==0) {
+      BIT opcode[6]={FALSE,FALSE,TRUE,FALSE,FALSE,FALSE};
+      copy_bits2(opcode,Output+26,6);
     }
     // addi
-    else if ((strlen(operation) == 4) && (operation[0] == 'a') && (operation[1] == 'd') && (operation[2] == 'd') && (operation[3] == 'i')) {
-      *opcode = "001000";
+    else if (strcmp("addi",operation)==0) {
+      BIT opcode[6]={FALSE,FALSE,FALSE,TRUE,FALSE,FALSE};
+      copy_bits2(opcode,Output+26,6);
     }
   }
   else if (Instruc_type == 'J') {
+    
     // j
     if (strlen(operation) == 1) {
-      *opcode = "000010";
+      BIT opcode[6]={FALSE,TRUE,FALSE,FALSE,FALSE,FALSE};
+      copy_bits2(opcode,Output+26,6);
     }
     // jal
-    if (strlen(operation) == 3) {
-      *opcode = "000011";
+    else if (strlen(operation) == 3) {
+      BIT opcode[6]={TRUE,TRUE,FALSE,FALSE,FALSE,FALSE};
+      copy_bits2(opcode,Output+26,6);
     }
   }
 }
 
 // convert the register into binary
-void convert_reg_2_B(char* reg, char** binary_output, int len) {
+void convert_reg_2_B(char* reg, BIT Output[]) {
   //zero
+  BIT Output2[5];
   int num=reg[1]-'0';
-  if ((reg[0] == 'z') && (reg[1] == 'e') && (reg[2] == 'r') && (reg[3] == 'o')) {
-    convert_to_binary_char(0, *binary_output, 5);
+  if (strcmp("zero\0",reg)==0) {
+    convert_to_binary(0, Output2, 5);
   }
   // sp
-  else if ((reg[0] == 's') && (reg[1] == 'p')) {
-    convert_to_binary_char(29, *binary_output, 5);
+  else if (strcmp("sp\0",reg)==0) {
+    convert_to_binary(29, Output2, 5);
   }    
   // ra
-  else if ((reg[0] == 'r') && (reg[1] == 'a')) {
-    convert_to_binary_char(31, *binary_output, 5);
+  else if (strcmp("ra\0",reg)==0) {
+    convert_to_binary(31, Output2, 5);
   }   
   // all v registers 
-  else if ((reg[0] == 'v')) {
-    convert_to_binary_char(2+num, *binary_output, 5);
+  else if (reg[0] == 'v') {
+    convert_to_binary(2+num, Output2, 5);
   }    
   // all a register
-  else if ((reg[0] == 'a')) {
-    convert_to_binary_char(4+num, *binary_output, 5);
+  else if (reg[0] == 'a') {
+    convert_to_binary(4+num, Output2, 5);
   }    
   // all t registers 
-  else if ((reg[0] == 't')) {
-    convert_to_binary_char(8+num, *binary_output, 5);
+  else if (reg[0] == 't') {
+    convert_to_binary(8+num, Output2, 5);
   }
   //all s registers     
-  else if ((reg[0] == 's')) {
-    convert_to_binary_char(16+num, *binary_output, 5);
+  else if (reg[0] == 's') {
+    convert_to_binary(16+num, Output2, 5);
+  }
+  for(int i=0;i<5;i++){
+    Output[i]=Output2[(-1)*(i-4)];
   }    
 }
 
 // covert R type
-void convert_Rtype(char* operation, char* reg1, char* reg2, char* reg3, char** reg1_out, char** reg2_out, char** reg3_out) {
+void convert_Rtype(char* operation, char* reg1, char* reg2, char* reg3, BIT Output[]) {
   int reg_size = 5;
 
   if ((operation[0] == 'j') && (operation[1] == 'r')) {
-    convert_reg_2_B(reg2, reg2_out, reg_size);
+    convert_reg_2_B(reg2,Output+5);
   }
   else {
-    convert_reg_2_B(reg1, reg1_out, reg_size);
-    convert_reg_2_B(reg2, reg2_out, reg_size);
-    convert_reg_2_B(reg3, reg3_out, reg_size);
+    convert_reg_2_B(reg2, Output+21);
+    convert_reg_2_B(reg3, Output+16);
+    convert_reg_2_B(reg1,Output+11);
   }
 }
 
-// conver J type
-void convert_JType(char* address, char** j_address) {
+// convert J type
+void convert_JType(char* address,BIT Output[]) {
   int address_int = atoi(address);
-
-  convert_to_binary_char(address_int, *j_address, 26);
+  BIT Output2[26];
+  convert_to_binary(address_int, Output2, 26);
+  for(int i=0;i<26;i++){
+    Output[i]=Output2[(-1)*(i-25)];
+  } 
 }
 
 // convert I type
-void convert_IType(char* reg1, char* reg2, char* offset, char** reg1_out, char** reg2_out, char** imm_field) {
-  int reg_size = 5;
+void convert_IType(char* reg1, char* reg2, char* offset, BIT Output[32]) {
   int offset_int = atoi(offset);
-  
-  convert_to_binary_char(offset_int, *imm_field, 16);
-
-  convert_reg_2_B(reg1, reg2_out, reg_size);
-  convert_reg_2_B(reg2, reg1_out, reg_size);
-}
-
-// output J type
-void J_output(char* opcode, char* j_address, BIT Output[32]) {
-  int i, count = 0;
-
-  for (i = 0; i < 26; i++) {
-    if (j_address[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // opcode
-  for ( i = 5; i >= 0; i--) {
-    if (opcode[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-}
-
-// output R type
-void R_output(char* opcode, char* rd_out, char* rs_out, char* rt_out, char* shamt, char* funct, BIT Output[32]) {
-  int i, count = 0;
-
-  // funct
-  for (i = 5; i >= 0; i--) {
-    if (funct[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else{
-      Output[count] = FALSE;
-    }
-    count++;
-  }  
-
-  // shamt
-  for (i = 4; i >= 0; i--) {
-    if (shamt[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else{
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // rd
-  for (i = 0; i <=4; i++) {
-    if (rd_out[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else{
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // rt
-  for (i = 0; i <=4; i++) {
-    if (rt_out[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else{
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // rs
-  for (i = 0; i <=4; i++) {
-    if (rs_out[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
+  BIT Output2[26];
+  convert_to_binary(offset_int, Output2, 16);
+  for(int i=0;i<16;i++){
+    Output[i]=Output2[(-1)*(i-15)];
   } 
-
-  // opcode
-  for ( i = 5; i >= 0; i--) {
-    if (opcode[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
-  }
+  convert_reg_2_B(reg1, Output+16);
+  convert_reg_2_B(reg2, Output+21);
 }
-
-// output I type
-void I_output(char* opcode, char* rs_out, char* rt_out, char* imm_field, BIT Output[32]) {
-  int i, count = 0;
-
-  // immdiate_field
-  for (i = 0; i < 16; i++) {
-    if (imm_field[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // rt
-  for (i = 0; i < 5; i++) {
-    if (rt_out[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else{
-      Output[count] = FALSE;
-    }
-    count++;
-  }
-
-  // rs
-  for (i = 0; i < 5; i++) {
-    if (rs_out[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-    count++;
-  } 
-
-  // opcode
-  for ( i = 5; i >= 0; i--) {
-    
-    if (opcode[i] == '1') {
-      Output[count] = TRUE;
-    }
-    else {
-      Output[count] = FALSE;
-    }
-
-    count++;
-  }
-}
-
 // TODO: Implement any helper functions to assist with parsing
 
 int get_instructions(BIT Instructions[][32]) {
@@ -532,72 +421,34 @@ int get_instructions(BIT Instructions[][32]) {
     char* reg1 = calloc(20, 20 * sizeof(char));
     char* reg2 = calloc(20, 20 * sizeof(char));
     char* reg3 = calloc(20, 20 * sizeof(char));
-    char* offset = calloc(20, 20 * sizeof(char));
-    char* address = calloc(20, 20 * sizeof(char));
     char Instruc_type;
+    sscanf(line,"%s %s %s %s",Operation,reg1,reg2,reg3);
 
     // - Use sscanf on line to get strings for instruction and registers
     // 1. if it is J instruction
-    if ((line[0] == 'j') && (line[1] != 'r')) {
-      sscanf(line, "%s %s", Operation, address);
+    if (strcmp(Operation,"jal\0")==0 || strcmp(Operation,"j\0")==0) {
       Instruc_type = 'J';
     }
-    // if it is I Instruction:lw                       sw                                        beq                                                            addi
-    else if (((line[0] == 'l') && (line[1] == 'w')) || ((line[0] == 's') && (line[1] == 'w')) || ((line[0] == 'b') && (line[1] == 'e') && (line[2] == 'q')) || ((line[0] == 'a') && (line[1] == 'd') && (line[2] == 'd') && (line[3] == 'i'))) {
-      sscanf(line, "%s %s %s %s", Operation, reg1, reg2, offset);
+    // if it is I Instruction:lw                       sw                                  beq                              addi
+    else if (strcmp("lw\0",Operation)==0 || strcmp("sw\0",Operation)==0 || strcmp("beq\0",Operation)==0 || strcmp("addi\0",Operation)==0) {
       Instruc_type = 'I';
     } 
-    // if it is R Instruction:and                                           or                                       add                                                           sub                                                           slt                                                            jr
-    else if (((line[0] == 'a') && (line[1] == 'n') && (line[2] == 'd')) || ((line[0] == 'o') && (line[1] == 'r')) || ((line[0] == 'a') && (line[1] == 'd') && (line[2] == 'd')) || ((line[0] == 's') && (line[1] == 'u') && (line[2] == 'b')) || ((line[0] == 's') && (line[1] == 'l') && (line[2] == 't')) || ((line[0] == 'j') && (line[1] == 'r'))) {
-      if ((line[0] == 'j') && (line[1] == 'r')) {
-        sscanf(line, "%s %s", Operation, reg2);
-      }
-      else {
-        sscanf(line, "%s %s %s %s", Operation, reg1, reg2, reg3);
-      }
-      
+    // if it is R Instruction:and                      or                          add                      sub                slt                                  jr
+    else if (strcmp("and\0",Operation) || strcmp("or\0",Operation) || strcmp("add\0",Operation) || strcmp("sub\0",Operation) || strcmp("slt\0",Operation) || strcmp("jr\0",Operation)) {
       Instruc_type = 'R';
     }
-    
-    //- Use instructions to determine op code, funct, and shamt fields
-    char* opcode = calloc(20, 20 * sizeof(char));
-    char* funct = calloc(20, 20 * sizeof(char));
-    char* shamt = calloc(20, 20 * sizeof(char));
-    char* type = calloc(20, 20 * sizeof(char)); 
-    convert_instruc(Instruc_type, Operation, &opcode, &funct, &shamt);
-
-    // - Convert immediate field and jump address field to binary
-    char* reg1_out = calloc(5, 5 * sizeof(char));
-    char* reg2_out = calloc(5, 5 * sizeof(char));
-    char* reg3_out = calloc(5, 5 * sizeof(char));
-    memset(reg1_out, '0', 5);
-    memset(reg2_out, '0', 5);
-    memset(reg3_out, '0', 5);
-    char* imm_field = calloc(16, 16 * sizeof(char));
-    memset(imm_field, '0', 16);
-    char* j_address = calloc(26, 26 * sizeof(char));
-    memset(j_address, '0', 26);
-
-    BIT Instruc_temp[32] = {FALSE};
-    int i;
-
+    convert_instruc(Instruc_type, Operation, Instructions[instruction_count]);
     if (Instruc_type == 'R') {
-      convert_Rtype(Operation, reg1, reg2, reg3, &reg1_out, &reg2_out, &reg3_out);
-      R_output(opcode, reg1_out, reg2_out, reg3_out, shamt, funct, Instruc_temp);
+      convert_Rtype(Operation, reg1, reg2, reg3,Instructions[instruction_count]);
     }   
     else if (Instruc_type == 'J') {
-      convert_JType(address, &j_address);
-      J_output(opcode, j_address, Instruc_temp);
+      convert_JType(reg1,Instructions[instruction_count]);
     }
     else if (Instruc_type == 'I') {
-      convert_IType(reg1, reg2, offset, &reg1_out, &reg2_out, &imm_field);
-      I_output(opcode, reg1_out, reg2_out, imm_field, Instruc_temp);
+      convert_IType(reg1, reg2, reg3,Instructions[instruction_count]);
+      print_binary(Instructions[instruction_count]);
+      //I_output(opcode, reg1_out, reg2_out, imm_field, Instruc_temp);
     }
- 
-    for (i = 0; i < 32; i++) {
-      Instructions[instruction_count][i] = Instruc_temp[i];
-    }
-
     instruction_count++;
   }
   
