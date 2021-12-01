@@ -54,6 +54,8 @@ void print_binary(BIT* A);
 void convert_to_binary(int a, BIT* A, int length);
 void convert_to_binary_char(int a, char* A, int length);
 int binary_to_integer(BIT* A);
+void decoder3(BIT* I, BIT EN, BIT* O);
+void decoder5(BIT* I, BIT* O);
 
 int get_instructions(BIT Instructions[][32]);
 
@@ -168,7 +170,44 @@ BIT multiplexor4(BIT S0, BIT S1, BIT I0, BIT I1, BIT I2, BIT I3)
   
   return or_gate(z0, z1);  
 }
+void decoder3(BIT* I, BIT EN, BIT* O)
+{
+  // TODO: implement 3-to-8 decoder using gates
+  // See lecture slides, book, and/or online resources for logic designs
+  
+  O[0] = and_gate3(not_gate(I[2]), not_gate(I[1]), not_gate(I[0]));
+  O[1] = and_gate3(not_gate(I[2]), not_gate(I[1]), I[0]);
+  O[2] = and_gate3(not_gate(I[2]), I[1], not_gate(I[0]));
+  O[3] = and_gate3(not_gate(I[2]), I[1], I[0]);
+  O[4] = and_gate3(I[2], not_gate(I[1]), not_gate(I[0]));
+  O[5] = and_gate3(I[2], not_gate(I[1]), I[0]);
+  O[6] = and_gate3(I[2], I[1], not_gate(I[0]));
+  O[7] = and_gate3(I[2], I[1], I[0]);
+  
+  O[0] = and_gate(EN, O[0]);
+  O[1] = and_gate(EN, O[1]);
+  O[2] = and_gate(EN, O[2]);
+  O[3] = and_gate(EN, O[3]);
+  O[4] = and_gate(EN, O[4]);
+  O[5] = and_gate(EN, O[5]);
+  O[6] = and_gate(EN, O[6]);
+  O[7] = and_gate(EN, O[7]);
+  
+  return;
+}
 
+void decoder5(BIT* I, BIT* O)
+{
+  // TODO: implement 5-to-32 decoder using 2-to-4 and 3-to-8 decoders
+  // https://fci.stafpu.bu.edu.eg/Computer%20Science/4887/crs-12801/Files/hw4-solution.pdf
+  
+   BIT EN[4] = {FALSE};
+   decoder2(I[3], I[4], &EN[0], &EN[1], &EN[2], &EN[3]);
+   decoder3(I, EN[3], &O[24]);
+   decoder3(I, EN[2], &O[16]);
+   decoder3(I, EN[1], &O[8]);
+   decoder3(I, EN[0], &O[0]);
+}
 
 /******************************************************************************/
 /* Helper functions */
@@ -446,10 +485,11 @@ int get_instructions(BIT Instructions[][32]) {
     }
     else if (Instruc_type == 'I') {
       convert_IType(reg1, reg2, reg3,Instructions[instruction_count]);
-      print_binary(Instructions[instruction_count]);
-      //I_output(opcode, reg1_out, reg2_out, imm_field, Instruc_temp);
     }
     instruction_count++;
+    if(line[0]=='\n'){
+      break;
+    }
   }
   
   return instruction_count;
@@ -505,6 +545,7 @@ void print_state()
 /******************************************************************************/
 void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
 {
+  
   // TODO: Implement instruction memory
   // Input: 32-bit instruction address
   // Output: 32-bit binary instruction
