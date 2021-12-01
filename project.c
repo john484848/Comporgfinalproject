@@ -299,33 +299,10 @@ void convert_instruc(char Instruc_type, char* operation, char** opcode, char** f
 // convert the register into binary
 void convert_reg_2_B(char* reg, char** binary_output, int len) {
   //zero
+  int num=reg[1]-'0';
   if ((reg[0] == 'z') && (reg[1] == 'e') && (reg[2] == 'r') && (reg[3] == 'o')) {
     convert_to_binary_char(0, *binary_output, 5);
   }
-  // v0
-  else if ((reg[0] == 'v') && (reg[1] == '0')) {
-    convert_to_binary_char(2, *binary_output, 5);
-  }    
-  // a0
-  else if ((reg[0] == 'a') && (reg[1] == '0')) {
-    convert_to_binary_char(4, *binary_output, 5);
-  }    
-  // t0 
-  else if ((reg[0] == 't') && (reg[1] == '0')) {
-    convert_to_binary_char(8, *binary_output, 5);
-  }    
-  // t1
-  else if ((reg[0] == 't') && (reg[1] == '1')) {
-    convert_to_binary_char(9, *binary_output, 5);
-  }    
-  // s0
-  else if ((reg[0] == 's') && (reg[1] == '0')) {
-    convert_to_binary_char(16, *binary_output, 5);
-  }    
-  // s1
-  else if ((reg[0] == 's') && (reg[1] == '1')) {
-    convert_to_binary_char(17, *binary_output, 5);
-  }    
   // sp
   else if ((reg[0] == 's') && (reg[1] == 'p')) {
     convert_to_binary_char(29, *binary_output, 5);
@@ -334,6 +311,22 @@ void convert_reg_2_B(char* reg, char** binary_output, int len) {
   else if ((reg[0] == 'r') && (reg[1] == 'a')) {
     convert_to_binary_char(31, *binary_output, 5);
   }   
+  // all v registers 
+  else if ((reg[0] == 'v')) {
+    convert_to_binary_char(2+num, *binary_output, 5);
+  }    
+  // all a register
+  else if ((reg[0] == 'a')) {
+    convert_to_binary_char(4+num, *binary_output, 5);
+  }    
+  // all t registers 
+  else if ((reg[0] == 't')) {
+    convert_to_binary_char(8+num, *binary_output, 5);
+  }
+  //all s registers     
+  else if ((reg[0] == 's')) {
+    convert_to_binary_char(16+num, *binary_output, 5);
+  }    
 }
 
 // covert R type
