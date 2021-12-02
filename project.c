@@ -500,38 +500,30 @@ int get_instructions(BIT Instructions[][32]) {
     // - Convert immediate field and jump address field to binary
     // - Use registers to get rt, rd, rs fields
     // Note: I parse everything as strings, then convert to BIT array at end
-
-    
+    if(line[0]=='\n'){
+      break;
+    }
     sscanf(line,"%s %s %s %s",Operation,reg1,reg2,reg3);
 
     // - Use sscanf on line to get strings for instruction and registers
     // 1. if it is J instruction
     if (strcmp(Operation,"jal\0")==0 || strcmp(Operation,"j\0")==0) {
       Instruc_type = 'J';
+      convert_JType(reg1,Instructions[instruction_count]);
     }
     // if it is I Instruction:lw                       sw                                  beq                              addi
     else if (strcmp("lw\0",Operation)==0 || strcmp("sw\0",Operation)==0 || strcmp("beq\0",Operation)==0 || strcmp("addi\0",Operation)==0) {
       Instruc_type = 'I';
+      convert_IType(reg1, reg2, reg3,Instructions[instruction_count]);
     } 
     // if it is R Instruction:and                      or                          add                      sub                slt                                  jr
     else if (strcmp("and\0",Operation) || strcmp("or\0",Operation) || strcmp("add\0",Operation) || strcmp("sub\0",Operation) || strcmp("slt\0",Operation) || strcmp("jr\0",Operation)) {
       Instruc_type = 'R';
+      convert_Rtype(Operation, reg1, reg2, reg3,Instructions[instruction_count]);
     }
     convert_instruc(Instruc_type, Operation, Instructions[instruction_count]);
-    if (Instruc_type == 'R') {
-      convert_Rtype(Operation, reg1, reg2, reg3,Instructions[instruction_count]);
-    }   
-    else if (Instruc_type == 'J') {
-      convert_JType(reg1,Instructions[instruction_count]);
-    }
-    else if (Instruc_type == 'I') {
-      convert_IType(reg1, reg2, reg3,Instructions[instruction_count]);
-    }
     print_binary(Instructions[instruction_count]);
     instruction_count++;
-    if(line[0]=='\n'){
-      break;
-    }
   }
   free(Operation);
   free(reg1);
