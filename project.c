@@ -759,11 +759,9 @@ void updateState()
   BIT * z=calloc(32,sizeof(BIT));
   Instruction_Memory(PC,Ins);
   print_binary(Ins);
-  printf("\n");
   Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
   ALU_Control(ALUOp,Ins,ALUC);
   ALU(ALUC,ONE,ZERO,z,R);
-  printf("%d\n",binary_to_integer(R));
   Write_Register(*RegWrite,Ins+11,R);  
 }
 
