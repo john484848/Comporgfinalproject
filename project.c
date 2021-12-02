@@ -176,7 +176,6 @@ void ALU1(BIT A, BIT B, BIT Binvert, BIT CarryIn, BIT Less,
   // TODO: implement a 1-bit ALU 
   // Note: this will need modifications from Lab 5 to account for 'slt'
   // See slide "MSB ALU" in csci2500-f21-ch03a-slides.pdf
-
   BIT x0 = multiplexor2(Binvert, B, not_gate(B));
   
   BIT y0 = and_gate(A, x0);
@@ -375,7 +374,7 @@ void convert_instruc(char Instruc_type, char* operation, BIT Output[32]) {
       //funct = "101010";
     }
     // jr
-    else if (strcmp("jr\0",operation)) {
+    else if (strcmp("jr\0",operation)==0) {
       BIT funct[6]={FALSE,FALSE,FALSE,TRUE,FALSE,FALSE};
       copy_bits2(funct,Output,6);
       //funct = "001000";
@@ -455,7 +454,7 @@ void convert_reg_2_B(char* reg, BIT Output[]) {
 // covert R type
 void convert_Rtype(char* operation, char* reg1, char* reg2, char* reg3, BIT Output[]) {
   if ((operation[0] == 'j') && (operation[1] == 'r')) {
-    convert_reg_2_B(reg2,Output+5);
+    convert_reg_2_B(reg2,Output+21);
   }
   else {
     convert_reg_2_B(reg2, Output+21);
@@ -521,7 +520,6 @@ int get_instructions(BIT Instructions[][32]) {
       convert_Rtype(Operation, reg1, reg2, reg3,Instructions[instruction_count]);
     }
     convert_instruc(Instruc_type, Operation, Instructions[instruction_count]);
-    print_binary(Instructions[instruction_count]);
     instruction_count++;
   }
   free(Operation);
@@ -589,7 +587,11 @@ void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
   decoder5(ReadAddress,Instruction);
   for(int i=0;i<32;i++){
     if(and_gate(Instruction[i],TRUE)){
-      Instruction=(BIT *)MEM_Instruction[i];
+      for(int r=0;r<32;r++){
+        Instruction[r]=MEM_Instruction[i][r];
+
+      }
+      break;
     }
   }
 }
@@ -598,25 +600,15 @@ void Control(BIT* OpCode,
   BIT* RegDst, BIT* Jump, BIT* Branch, BIT* MemRead, BIT* MemToReg,
   BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite)
 {
-  BIT jump[6]={FALSE,TRUE,FALSE,FALSE,FALSE,FALSE};
-  BIT jr[6]={FALSE};
-  BIT beq[6]={FALSE,FALSE,TRUE,FALSE,FALSE,FALSE};
-  BIT j=TRUE;
-  for(int i=0;i<6;i++){
-    j=and_gate(j,not_gate(xor_gate(OpCode[i],jump[i])));
-  }
-  j=not_gate(j);
-  BIT JR=TRUE;
-  for(int i=0;i<6;i++){
-    JR=and_gate(JR,not_gate(xor_gate(OpCode[i],jr[i])));
-  }
-  JR=not_gate(JR);
-  BIT BEQ=TRUE;
-  for(int i=0;i<6;i++){
-    BEQ=and_gate(BEQ,not_gate(xor_gate(OpCode[i],beq[i])));
-  }
-  BEQ=not_gate(BEQ);
-  *RegWrite=and_gate3(BEQ,JR,j);
+  *Jump=FALSE;
+  *Branch=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),OpCode[2]),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));;
+  *RegDst=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));
+  *MemRead=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),OpCode[5]));
+  *MemWrite=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),OpCode[5]));
+  ALUOp[1]=*RegDst;
+  ALUOp[0]=*Branch;
+  *RegWrite=or_gate(*RegDst,*MemRead);
+  *ALUSrc=or_gate(*MemRead,*MemWrite);
   // TODO: Set control bits for everything
   // Input: opcode field from the instruction
   // OUtput: all control lines get set 
@@ -668,6 +660,10 @@ void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData)
 
 void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl)
 {
+  ALUControl[3]=and_gate(ALUOp[0],not_gate(ALUOp[0]));
+  ALUControl[2]=or_gate(ALUOp[0],and_gate(ALUOp[1],funct[1]));
+  ALUControl[1]=or_gate(not_gate(ALUOp[1]),not_gate(funct[2]));
+  ALUControl[0]=and_gate(ALUOp[1],or_gate(funct[0],funct[3]));
   // TODO: Implement ALU Control circuit
   // Input: 2-bit ALUOp from main control circuit, 6-bit funct field from the
   //        binary instruction
@@ -677,7 +673,12 @@ void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl)
 }
 
 void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
-{   
+{
+  BIT Bin=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),and_gate(ALUControl[1],ALUControl[2]));
+  BIT op1=or_gate(Bin,and_gate(TRUE,ALUControl[1]));
+  BIT op0=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),ALUControl[0]);
+  BIT carryout=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),and_gate(ALUControl[1],ALUControl[2]));  
+  ALU32(Input1,Input2,Bin,carryout,TRUE,FALSE,Result,&carryout,Zero); 
   // TODO: Implement 32-bit ALU
   // Input: 4-bit ALUControl, two 32-bit inputs
   // Output: 32-bit result, and zero flag big
@@ -742,7 +743,28 @@ void updateState()
   // Memory - read/write data memory
   // Write Back - write to the register file
   // Update PC - determine the final PC value for the next instruction
-  
+  BIT * Ins=calloc(32,sizeof(BIT));
+  BIT * RegDst=calloc(1,sizeof(BIT));
+  BIT * Jump=calloc(1,sizeof(BIT));
+  BIT * Branch=calloc(1,sizeof(BIT));
+  BIT * MemRead=calloc(1,sizeof(BIT));
+  BIT * MemToReg=calloc(1,sizeof(BIT));
+  BIT * ALUOp=calloc(2,sizeof(BIT));
+  BIT * MemWrite=calloc(1,sizeof(BIT));
+  BIT * ALUSrc=calloc(1,sizeof(BIT));
+  BIT * RegWrite=calloc(1,sizeof(BIT));
+  BIT * ALUC=calloc(4,sizeof(BIT));
+  BIT * R=calloc(32,sizeof(BIT));
+  BIT * I1=calloc(32,sizeof(BIT));
+  BIT * z=calloc(32,sizeof(BIT));
+  Instruction_Memory(PC,Ins);
+  print_binary(Ins);
+  printf("\n");
+  Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
+  ALU_Control(ALUOp,Ins,ALUC);
+  ALU(ALUC,ONE,ZERO,z,R);
+  printf("%d\n",binary_to_integer(R));
+  Write_Register(*RegWrite,Ins+11,R);  
 }
 
 
@@ -753,32 +775,17 @@ void updateState()
 int main()
 {
   setbuf(stdout, NULL);
-  BIT opcode[6]={FALSE,TRUE,FALSE,TRUE,FALSE,FALSE};
-  BIT * i1;
-  BIT * i2;
-  BIT * i3;
-  BIT * i4;
-  BIT * i5;
-  BIT * i6;
-  BIT * i7;
-  BIT * i8;
-  BIT * i9;
-  
-  
-  Control(opcode,i1,i2,i3,i4,i5,i6,i7,i8,i9);
   // parse instructions into binary format
-  /*
   int counter = get_instructions(MEM_Instruction);
   // load program and run
   copy_bits(ZERO, PC);
   copy_bits(THIRTY_TWO, MEM_Register[29]);
   
-  while (binary_to_integer(PC) < counter) {
+  //while (binary_to_integer(PC) < counter) {
     print_instruction();
     updateState();
     print_state();
-  }
-  */
+  //}
   return 0;
 }
 
