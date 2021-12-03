@@ -182,7 +182,8 @@ void ALU1(BIT A, BIT B, BIT Binvert, BIT CarryIn, BIT Less,
   BIT y1 = or_gate(A, x0);
   
   BIT y2 = FALSE;
-  adder1(A, x0, CarryIn, CarryOut, &y2); 
+  adder1(A, x0, CarryIn, CarryOut, &y2);
+  //printf("%d, %d, %d\n",A,x0,y2);
   *Set = y2;
   
   BIT y3 = Less; 
@@ -198,15 +199,19 @@ void ALU32(BIT* A, BIT* B, BIT Binvert, BIT CarryIn,
 
   BIT Less = FALSE;
   BIT Set = FALSE;
-  *ZERO=TRUE;
+  *ZERO=FALSE;
+  //printf("%d,%d,%d,%d\n",Result[0],A[0],B[0],*CarryOut);
   ALU1(A[0], B[0], Binvert, CarryIn, Less, 
     Op0, Op1, &Result[0], CarryOut, &Set,ZERO);
+     //printf("%d,%d,%d,%d\n",Result[0],A[0],B[0],*CarryOut);
   for (int i = 1; i < 32; ++i) {
+    //printf("%d,%d,%d,%d\n",Result[i],A[i],B[i],*CarryOut);
     ALU1(A[i], B[i], Binvert, *CarryOut, Less, 
       Op0, Op1, &Result[i], CarryOut, &Set,ZERO);
   }
-  
   Less = Set;
+  print_binary(Result);
+  printf("\n");
   ALU1(A[0], B[0], Binvert, CarryIn, Less, 
     Op0, Op1, &Result[0], CarryOut, &Set,ZERO);
 }
@@ -664,11 +669,11 @@ void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl)
 
 void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
 {
-  BIT Bin=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),and_gate(ALUControl[1],ALUControl[2]));
-  BIT op1=or_gate(Bin,and_gate(TRUE,ALUControl[1]));
-  BIT op0=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),ALUControl[0]);
-  BIT carryout=or_gate(and_gate3(ALUControl[2],ALUControl[1],ALUControl[0]),and_gate(ALUControl[1],ALUControl[2]));  
-  ALU32(Input1,Input2,Bin,carryout,TRUE,FALSE,Result,&carryout,Zero); 
+  BIT Bin=ALUControl[2];
+  BIT op1=ALUControl[1];
+  BIT op0=ALUControl[0];
+  BIT carryout=ALUControl[2];  
+  ALU32(Input1,Input2,Bin,carryout,op0,op1,Result,&carryout,Zero); 
   // TODO: Implement 32-bit ALU
   // Input: 4-bit ALUControl, two 32-bit inputs
   // Output: 32-bit result, and zero flag big
@@ -739,10 +744,13 @@ void updateState()
   BIT * z=calloc(32,sizeof(BIT));
   Instruction_Memory(PC,Ins);
   Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
-  Read_Register(Ins+16,Ins+21,I1,I2);
+  Read_Register(Ins+21,Ins+16,I1,I2);
   ALU_Control(ALUOp,Ins,ALUC);
   ALU(ALUC,I1,I2,z,R);
-  Write_Register(*RegWrite,Ins+11,R);  
+  Write_Register(*RegWrite,Ins+11,R);
+  BIT co=FALSE;
+  ALU32(PC,ONE,FALSE,FALSE,FALSE,TRUE,z,&co,RegDst);
+  copy_bits(z,PC);
 }
 
 
@@ -758,13 +766,13 @@ int main()
   // load program and run
   copy_bits(ZERO, PC);
   copy_bits(THIRTY_TWO, MEM_Register[29]);
-  copy_bits(ONE,MEM_Register[8]);
-  
-  //while (binary_to_integer(PC) < counter) {
+  convert_to_binary(12,MEM_Register[8],32);
+  convert_to_binary(13,MEM_Register[9],32);
+  while (binary_to_integer(PC) < counter) {
     print_instruction();
     updateState();
     print_state();
-  //}
+  }
   return 0;
 }
 
