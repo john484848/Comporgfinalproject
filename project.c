@@ -585,15 +585,11 @@ void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
   // Output: 32-bit binary instruction
   // Note: Useful to use a 5-to-32 decoder here
   decoder5(ReadAddress,Instruction);
+  int z=0;
   for(int i=0;i<32;i++){
-    if(and_gate(Instruction[i],TRUE)){
-      for(int r=0;r<32;r++){
-        Instruction[r]=MEM_Instruction[i][r];
-
-      }
-      break;
-    }
+    z+=i*Instruction[i];
   }
+  copy_bits(MEM_Instruction[z],Instruction);
 }
 
 void Control(BIT* OpCode,
@@ -620,17 +616,17 @@ void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
   BIT* ReadData1, BIT* ReadData2)
 {
   decoder5(ReadRegister1,ReadData1);
+  int z=0;
   for(int i=0;i<32;i++){
-    if(and_gate(ReadData1[i],TRUE)){
-      ReadData1=MEM_Register[i];
-    }
+      z+=i*ReadData1[i];
   }
+  multiplexor2_32(TRUE,FALSE,MEM_Register[z],ReadData1);
   decoder5(ReadRegister2,ReadData2);
+  z=0;
   for(int i=0;i<32;i++){
-    if(and_gate(ReadData2[i],TRUE)){
-      ReadData2=MEM_Register[i];
-    }
+    z+=i*ReadData2[i];
   }
+  multiplexor2_32(TRUE,FALSE,MEM_Register[z],ReadData2);
   // TODO: Implement register read functionality
   // Input: two 5-bit register addresses
   // Output: the values of the specified registers in ReadData1 and ReadData2
@@ -640,17 +636,13 @@ void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
 
 void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData)
 {
-  if(and_gate(RegWrite,TRUE)){
     BIT e[32];
     decoder5(WriteRegister,e);
+    int z=0;
     for(int i=0;i<32;i++){
-      if(and_gate(e[i],TRUE)){
-        for(int r=0;r<32;r++){
-          MEM_Register[i][r]=WriteData[r];
-        }
-      }
+      z+=e[i]*i;
     }
-  }
+    multiplexor2_32(RegWrite,MEM_Register[z],WriteData,MEM_Register[z]);
   // TODO: Implement register write functionality
   // Input: one 5-bit register address, data to write, and control bit
   // Output: None, but will modify register file
@@ -689,26 +681,19 @@ void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
 void Data_Memory(BIT MemWrite, BIT MemRead, 
   BIT* Address, BIT* WriteData, BIT* ReadData)
 {
-  if(and_gate(MemWrite,TRUE)){
-    BIT e[32];
-    decoder5(Address,e);
-    for(int i=0;i<32;i++){
-      if(and_gate(e[i],TRUE)){
-        for(int r=0;r<32;r++){
-          MEM_Data[i][r]=WriteData[r];
-        }
-      }
-    }
+  BIT e[32];
+  decoder5(Address,e);
+  int z=0;
+  for(int i=0;i<32;i++){
+    z+=e[i]*i;
   }
-  if(and_gate(MemRead,TRUE)){
-    BIT e[32];
-    decoder5(Address,e);
-    for(int i=0;i<32;i++){
-      if(and_gate(e[i],TRUE)){
-        ReadData=(BIT *)MEM_Data[i];
-      }
-    }
+  multiplexor2_32(MemWrite,MEM_Data[z],WriteData,MEM_Data[z]);
+  decoder5(Address,e);
+  z=0;
+  for(int i=0;i<32;i++){
+    z+=e[i]*i;
   }
+  multiplexor2_32(MemRead,ZERO,MEM_Data[z],ReadData);
   // TODO: Implement data memory
   // Input: 32-bit address, control flags for read/write, and data to write
   // Output: data read if processing a lw instruction
@@ -758,7 +743,6 @@ void updateState()
   BIT * I1=calloc(32,sizeof(BIT));
   BIT * z=calloc(32,sizeof(BIT));
   Instruction_Memory(PC,Ins);
-  print_binary(Ins);
   Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
   ALU_Control(ALUOp,Ins,ALUC);
   ALU(ALUC,ONE,ZERO,z,R);
