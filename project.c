@@ -594,7 +594,7 @@ void Control(BIT* OpCode,
   BIT* RegDst, BIT* Jump, BIT* Branch, BIT* MemRead, BIT* MemToReg,
   BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite,BIT * Addi)
 {
-  *Jump=FALSE;
+  *Jump=and_gate(and_gate3(not_gate(OpCode[0]),OpCode[1],not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));
   *Addi=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5])));
   *Branch=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),OpCode[2]),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));;
   *RegDst=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));
@@ -709,6 +709,19 @@ void Extend_Sign16(BIT* Input, BIT* Output)
   // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
   
 }
+void Extend_Sign25(BIT* Input, BIT* Output)
+{
+  for(int i=0;i<25;i++){
+    Output[i]=Input[i];
+  }
+  BIT a=Input[24];
+  for(int i=25;i<32;i++){
+    Output[i]=a;
+  }
+  // TODO: Implement 16-bit to 32-bit sign extender
+  // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
+  
+}
 
 void updateState()
 {
@@ -758,8 +771,9 @@ void updateState()
   }
   Write_Register(*RegWrite,Dest,R);
   BIT co=FALSE;
+  Extend_Sign25(Ins,Dest);
   ALU32(PC,ONE,FALSE,FALSE,FALSE,TRUE,z,&co,RegDst);
-  copy_bits(z,PC);
+  multiplexor2_32(*Jump,z,Dest,PC);
 }
 
 
