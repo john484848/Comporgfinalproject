@@ -183,7 +183,6 @@ void ALU1(BIT A, BIT B, BIT Binvert, BIT CarryIn, BIT Less,
   
   BIT y2 = FALSE;
   adder1(A, x0, CarryIn, CarryOut, &y2);
-  //printf("%d, %d, %d\n",A,x0,y2);
   *Set = y2;
   
   BIT y3 = Less; 
@@ -200,18 +199,13 @@ void ALU32(BIT* A, BIT* B, BIT Binvert, BIT CarryIn,
   BIT Less = FALSE;
   BIT Set = FALSE;
   *ZERO=FALSE;
-  //printf("%d,%d,%d,%d\n",Result[0],A[0],B[0],*CarryOut);
   ALU1(A[0], B[0], Binvert, CarryIn, Less, 
     Op0, Op1, &Result[0], CarryOut, &Set,ZERO);
-     //printf("%d,%d,%d,%d\n",Result[0],A[0],B[0],*CarryOut);
   for (int i = 1; i < 32; ++i) {
-    //printf("%d,%d,%d,%d\n",Result[i],A[i],B[i],*CarryOut);
     ALU1(A[i], B[i], Binvert, *CarryOut, Less, 
       Op0, Op1, &Result[i], CarryOut, &Set,ZERO);
   }
   Less = Set;
-  print_binary(Result);
-  printf("\n");
   ALU1(A[0], B[0], Binvert, CarryIn, Less, 
     Op0, Op1, &Result[0], CarryOut, &Set,ZERO);
 }
@@ -605,10 +599,10 @@ void Control(BIT* OpCode,
   *RegDst=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));
   *MemRead=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),OpCode[5]));
   *MemWrite=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),OpCode[5]));
-  ALUOp[1]=*RegDst;
+  ALUOp[1]=or_gate(*RegDst,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
   ALUOp[0]=*Branch;
-  *RegWrite=or_gate(*RegDst,*MemRead);
-  *ALUSrc=or_gate(*MemRead,*MemWrite);
+  *RegWrite=or_gate3(*RegDst,*MemRead,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
+  *ALUSrc=or_gate3(*MemRead,*MemWrite,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
   // TODO: Set control bits for everything
   // Input: opcode field from the instruction
   // OUtput: all control lines get set 
@@ -702,11 +696,11 @@ void Data_Memory(BIT MemWrite, BIT MemRead,
 
 void Extend_Sign16(BIT* Input, BIT* Output)
 {
-  for(int i=0;i<=16;i++){
+  for(int i=0;i<16;i++){
     Output[i]=Input[i];
   }
-  BIT a=Input[16];
-  for(int i=17;i<32;i++){
+  BIT a=Input[15];
+  for(int i=16;i<32;i++){
     Output[i]=a;
   }
   // TODO: Implement 16-bit to 32-bit sign extender
@@ -742,12 +736,22 @@ void updateState()
   BIT * I1=calloc(32,sizeof(BIT));
   BIT * I2=calloc(32,sizeof(BIT));
   BIT * z=calloc(32,sizeof(BIT));
+  BIT * z2=calloc(32,sizeof(BIT));
+  BIT * Extend=calloc(32,sizeof(BIT));
+  BIT * Dest=calloc(32,sizeof(BIT));
   Instruction_Memory(PC,Ins);
+  Extend_Sign16(Ins,Extend);
   Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
   Read_Register(Ins+21,Ins+16,I1,I2);
   ALU_Control(ALUOp,Ins,ALUC);
+  multiplexor2_32(*ALUSrc,I2,Extend,I2);
   ALU(ALUC,I1,I2,z,R);
-  Write_Register(*RegWrite,Ins+11,R);
+  Data_Memory(*MemWrite,*MemRead,R,I2,z2);
+  multiplexor2_32(*MemToReg,R,z2,R);
+  for(int i=0;i<6;i++){
+    Dest[i]=multiplexor2(*RegDst,*(Ins+16+i),*(Ins+11+i));
+  }
+  Write_Register(*RegWrite,Dest,R);
   BIT co=FALSE;
   ALU32(PC,ONE,FALSE,FALSE,FALSE,TRUE,z,&co,RegDst);
   copy_bits(z,PC);
@@ -766,8 +770,8 @@ int main()
   // load program and run
   copy_bits(ZERO, PC);
   copy_bits(THIRTY_TWO, MEM_Register[29]);
-  convert_to_binary(12,MEM_Register[8],32);
-  convert_to_binary(13,MEM_Register[9],32);
+  //convert_to_binary(25,MEM_Register[8],32);
+  //convert_to_binary(13,MEM_Register[9],32);
   while (binary_to_integer(PC) < counter) {
     print_instruction();
     updateState();
