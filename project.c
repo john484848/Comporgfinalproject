@@ -66,11 +66,11 @@ int get_instructions(BIT Instructions[][32]);
 void Instruction_Memory(BIT* ReadAddress, BIT* Instruction);
 void Control(BIT* OpCode,
   BIT* RegDst, BIT* Jump, BIT* Branch, BIT* MemRead, BIT* MemToReg,
-  BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite);
+  BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite,BIT * Addi);
 void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
   BIT* ReadData1, BIT* ReadData2);
 void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData);
-void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl);
+void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl,BIT * Addi);
 void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result);
 void Data_Memory(BIT MemWrite, BIT MemRead, 
   BIT* Address, BIT* WriteData, BIT* ReadData);
@@ -592,12 +592,14 @@ void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
 
 void Control(BIT* OpCode,
   BIT* RegDst, BIT* Jump, BIT* Branch, BIT* MemRead, BIT* MemToReg,
-  BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite)
+  BIT* ALUOp, BIT* MemWrite, BIT* ALUSrc, BIT* RegWrite,BIT * Addi)
 {
   *Jump=FALSE;
+  *Addi=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5])));
   *Branch=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),OpCode[2]),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));;
   *RegDst=and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),not_gate(OpCode[5])));
   *MemRead=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(not_gate(OpCode[3]),not_gate(OpCode[4]),OpCode[5]));
+  *MemToReg=*MemRead;
   *MemWrite=and_gate(and_gate3(OpCode[0],OpCode[1],not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),OpCode[5]));
   ALUOp[1]=or_gate(*RegDst,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
   ALUOp[0]=*Branch;
@@ -647,12 +649,12 @@ void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData)
   
 }
 
-void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl)
+void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl,BIT * Addi)
 {
   ALUControl[3]=and_gate(ALUOp[0],not_gate(ALUOp[0]));
-  ALUControl[2]=or_gate(ALUOp[0],and_gate(ALUOp[1],funct[1]));
-  ALUControl[1]=or_gate(not_gate(ALUOp[1]),not_gate(funct[2]));
-  ALUControl[0]=and_gate(ALUOp[1],or_gate(funct[0],funct[3]));
+  ALUControl[2]=and_gate(not_gate(*Addi),or_gate(ALUOp[0],and_gate(ALUOp[1],funct[1])));
+  ALUControl[1]=or_gate3(not_gate(ALUOp[1]),not_gate(funct[2]),*Addi);
+  ALUControl[0]=and_gate3(ALUOp[1],or_gate(funct[0],funct[3]),not_gate(*Addi));
   // TODO: Implement ALU Control circuit
   // Input: 2-bit ALUOp from main control circuit, 6-bit funct field from the
   //        binary instruction
@@ -725,6 +727,7 @@ void updateState()
   BIT * RegDst=calloc(1,sizeof(BIT));
   BIT * Jump=calloc(1,sizeof(BIT));
   BIT * Branch=calloc(1,sizeof(BIT));
+  BIT * Addi=calloc(1,sizeof(BIT));
   BIT * MemRead=calloc(1,sizeof(BIT));
   BIT * MemToReg=calloc(1,sizeof(BIT));
   BIT * ALUOp=calloc(2,sizeof(BIT));
@@ -735,18 +738,20 @@ void updateState()
   BIT * R=calloc(32,sizeof(BIT));
   BIT * I1=calloc(32,sizeof(BIT));
   BIT * I2=calloc(32,sizeof(BIT));
+  BIT * I3=calloc(32,sizeof(BIT));
   BIT * z=calloc(32,sizeof(BIT));
   BIT * z2=calloc(32,sizeof(BIT));
   BIT * Extend=calloc(32,sizeof(BIT));
   BIT * Dest=calloc(32,sizeof(BIT));
   Instruction_Memory(PC,Ins);
   Extend_Sign16(Ins,Extend);
-  Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite);
+  Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite,Addi);
   Read_Register(Ins+21,Ins+16,I1,I2);
-  ALU_Control(ALUOp,Ins,ALUC);
+  multiplexor2_32(TRUE,I2,I2,I3);
+  ALU_Control(ALUOp,Ins,ALUC,Addi);
   multiplexor2_32(*ALUSrc,I2,Extend,I2);
   ALU(ALUC,I1,I2,z,R);
-  Data_Memory(*MemWrite,*MemRead,R,I2,z2);
+  Data_Memory(*MemWrite,*MemRead,R,I3,z2);
   multiplexor2_32(*MemToReg,R,z2,R);
   for(int i=0;i<6;i++){
     Dest[i]=multiplexor2(*RegDst,*(Ins+16+i),*(Ins+11+i));
