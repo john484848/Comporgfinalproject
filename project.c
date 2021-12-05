@@ -461,7 +461,9 @@ void convert_reg_2_B(char* reg, BIT Output[]) {
 // covert R type
 void convert_Rtype(char* operation, char* reg1, char* reg2, char* reg3, BIT Output[]) {
   if ((operation[0] == 'j') && (operation[1] == 'r')) {
+    printf("%s\n",reg1);
     convert_reg_2_B(reg1,Output+21);
+    convert_to_binary(8, Output+14, 6);
   }
   else {
     convert_reg_2_B(reg2, Output+21);
@@ -678,7 +680,7 @@ void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
   BIT Bin=ALUControl[2];
   BIT op1=ALUControl[1];
   BIT op0=ALUControl[0];
-  BIT carryout=ALUControl[2];  
+  BIT carryout=ALUControl[2];
   ALU32(Input1,Input2,Bin,carryout,op0,op1,Result,&carryout,Zero); 
   // TODO: Implement 32-bit ALU
   // Input: 4-bit ALUControl, two 32-bit inputs
@@ -785,10 +787,12 @@ void updateState()
   BIT co=FALSE;
   Extend_Sign25(Ins,Dest);
   multiplexor2_32(*JR,Dest,I1,Dest);
-  multiplexor2_32(and_gate(*Branch,*z),ONE,Extend,Dest);
-  ALU32(PC,Dest,FALSE,FALSE,FALSE,TRUE,z,&co,RegDst);
-  multiplexor2_32(or_gate(*Jump,*JR),z,Dest,PC);
-  multiplexor2_32(*JAL,MEM_Register[31],PC,MEM_Register[31]);
+  multiplexor2_32(and_gate(*Branch,*z),Dest,Extend,Dest);
+  ALU32(PC,ONE,FALSE,FALSE,FALSE,TRUE,z2,&co,RegDst);
+  ALU32(z2,Dest,FALSE,FALSE,FALSE,TRUE,Extend,&co,RegDst);
+  multiplexor2_32(or_gate3(*Jump,*JR,*JAL),z2,Dest,PC);
+  multiplexor2_32(and_gate(*Branch,*z),PC,Extend,PC);
+  multiplexor2_32(*JAL,MEM_Register[31],z2,MEM_Register[31]);
 }
 
 
