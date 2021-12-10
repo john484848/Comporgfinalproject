@@ -616,6 +616,7 @@ void Control(BIT* OpCode,
   ALUOp[0]=*Branch;
   *RegWrite=or_gate3(*RegDst,*MemRead,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
   *ALUSrc=or_gate3(*MemRead,*MemWrite,and_gate(and_gate3(not_gate(OpCode[0]),not_gate(OpCode[1]),not_gate(OpCode[2])),and_gate3(OpCode[3],not_gate(OpCode[4]),not_gate(OpCode[5]))));
+  //Uses SOP to calculate the values for all the control bits
   // TODO: Set control bits for everything
   // Input: opcode field from the instruction
   // OUtput: all control lines get set 
@@ -633,12 +634,14 @@ void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
       r=or_gate(e[i],r);
       multiplexor2_32(and_gate(r,e[i]),ReadData1,MEM_Register[i],ReadData1);
   }
+  //find the register and copies the data
   decoder5(ReadRegister2,e);
   r=FALSE;
   for(int i=0;i<32;i++){
     r=or_gate(e[i],r);
     multiplexor2_32(and_gate(r,e[i]),ReadData2,MEM_Register[i],ReadData2);
   }
+  //find the register and copies the data
   // TODO: Implement register read functionality
   // Input: two 5-bit register addresses
   // Output: the values of the specified registers in ReadData1 and ReadData2
@@ -653,6 +656,7 @@ void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData)
     for(int i=0;i<32;i++){
       multiplexor2_32(and_gate(RegWrite,e[i]),MEM_Register[i],WriteData,MEM_Register[i]);
     }
+    //find the register and writes the data if the control bit will allow it.
   // TODO: Implement register write functionality
   // Input: one 5-bit register address, data to write, and control bit
   // Output: None, but will modify register file
@@ -667,6 +671,7 @@ void ALU_Control(BIT* ALUOp, BIT* funct, BIT* ALUControl,BIT * Addi, BIT * JR)
   ALUControl[2]=and_gate(not_gate(*Addi),or_gate(ALUOp[0],and_gate(ALUOp[1],funct[1])));
   ALUControl[1]=or_gate3(not_gate(ALUOp[1]),not_gate(funct[2]),*Addi);
   ALUControl[0]=and_gate3(ALUOp[1],or_gate(funct[0],funct[3]),not_gate(*Addi));
+  //creats a 4 bit alu operation out of the 2 bit alu operation and the funct also detects JR because it is an r type instuction and this is the only method with acess to the funct
   // TODO: Implement ALU Control circuit
   // Input: 2-bit ALUOp from main control circuit, 6-bit funct field from the
   //        binary instruction
@@ -681,7 +686,8 @@ void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
   BIT op1=ALUControl[1];
   BIT op0=ALUControl[0];
   BIT carryout=ALUControl[2];
-  ALU32(Input1,Input2,Bin,carryout,op0,op1,Result,&carryout,Zero); 
+  ALU32(Input1,Input2,Bin,carryout,op0,op1,Result,&carryout,Zero);
+  //Converts the 4 bit ALU control to an opperation for the ALU and sets all the other necissary bits.  
   // TODO: Implement 32-bit ALU
   // Input: 4-bit ALUControl, two 32-bit inputs
   // Output: 32-bit result, and zero flag big
@@ -697,10 +703,12 @@ void Data_Memory(BIT MemWrite, BIT MemRead,
   for(int i=0;i<32;i++){
     multiplexor2_32(and_gate(MemWrite,e[i]),MEM_Data[i],WriteData,MEM_Data[i]);
   }
+  //Find the adress and writes the data to memory 
   decoder5(Address,e);
   for(int i=0;i<32;i++){
      multiplexor2_32(and_gate(MemRead,e[i]),ReadData,MEM_Data[i],ReadData);
   }
+  //Finds the adress and reads the data from memory
   // TODO: Implement data memory
   // Input: 32-bit address, control flags for read/write, and data to write
   // Output: data read if processing a lw instruction
@@ -717,6 +725,7 @@ void Extend_Sign16(BIT* Input, BIT* Output)
   for(int i=16;i<32;i++){
     Output[i]=a;
   }
+  //Extends 16bit to 32 bit
   // TODO: Implement 16-bit to 32-bit sign extender
   // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
   
@@ -730,8 +739,7 @@ void Extend_Sign25(BIT* Input, BIT* Output)
   for(int i=25;i<32;i++){
     Output[i]=a;
   }
-  // TODO: Implement 16-bit to 32-bit sign extender
-  // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
+  //Extends 25 to 32 
   
 }
 
@@ -770,20 +778,33 @@ void updateState()
   BIT * z2=calloc(32,sizeof(BIT));
   BIT * Extend=calloc(32,sizeof(BIT));
   BIT * Dest=calloc(32,sizeof(BIT));
+  //Allocate necissary memory
   Instruction_Memory(PC,Ins);
+  //get instructiosn 
   Extend_Sign16(Ins,Extend);
+  //sign extend in case of immidiate 
   Control(Ins+26,RegDst,Jump,Branch,MemRead,MemToReg,ALUOp,MemWrite,ALUSrc,RegWrite,Addi,JAL);
+  //set control bits
   Read_Register(Ins+21,Ins+16,I1,I2);
+  //read values from registers
   multiplexor2_32(TRUE,I2,I2,I3);
+  //copy data for later
   ALU_Control(ALUOp,Ins,ALUC,Addi,JR);
+  //Sets alu op
   multiplexor2_32(*ALUSrc,I2,Extend,I2);
+  //decides wether or not to use an immidiate
   ALU(ALUC,I1,I2,z,R);
+  //calls alu to do the computation
   Data_Memory(*MemWrite,*MemRead,R,I3,z2);
+  //if necissary write the result to memory 
   multiplexor2_32(*MemToReg,R,z2,R);
+  //puts the data in a variable to be writen to a register if necissary 
   for(int i=0;i<6;i++){
     Dest[i]=multiplexor2(*RegDst,*(Ins+16+i),*(Ins+11+i));
   }
+  //gets the destination
   Write_Register(*RegWrite,Dest,R);
+  //writes to the registers
   BIT co=FALSE;
   Extend_Sign25(Ins,Dest);
   multiplexor2_32(*JR,Dest,I1,Dest);
@@ -793,6 +814,7 @@ void updateState()
   multiplexor2_32(or_gate3(*Jump,*JR,*JAL),z2,Dest,PC);
   multiplexor2_32(and_gate(*Branch,*z),PC,Extend,PC);
   multiplexor2_32(*JAL,MEM_Register[31],z2,MEM_Register[31]);
+  //moving pc for jumps and execution 
 }
 
 
